@@ -2,13 +2,13 @@
 # This assignment introduces students to text similarity measures using cosine similarity and sentence embeddings. 
 # Students will implement and compare different methods for computing and analyzing text similarity using GloVe, Sentence Transformers, and OpenAI Embeddings.
 
-#Learning Objectives
-#By the end of this assignment, students will:
-#Understand how cosine similarity is used to measure text similarity.
-#Learn to encode sentences using GloVe embeddings, Sentence Transformers, and OpenAI embeddings.
-#Compare the performance of different embedding techniques (small vs large models).
-#Create a Web interface for your model
-#Analyze intuitive examples like "Chocolate Milk" vs "Milk Chocolate" to understand embedding behavior
+# Learning Objectives
+# By the end of this assignment, students will:
+# Understand how cosine similarity is used to measure text similarity.
+# Learn to encode sentences using GloVe embeddings, Sentence Transformers, and OpenAI embeddings.
+# Compare the performance of different embedding techniques (small vs large models).
+# Create a Web interface for your model
+# Analyze intuitive examples like "Chocolate Milk" vs "Milk Chocolate" to understand embedding behavior
 
 # Context: In this part, you are going to play around with some commonly used pretrained text embeddings for text search. For example, GloVe is an unsupervised learning algorithm for obtaining vector representations for words. Pretrained on 
 # 2 billion tweets with vocabulary size of 1.2 million. Download from [Stanford NLP](http://nlp.stanford.edu/data/glove.twitter.27B.zip). 
@@ -45,9 +45,9 @@ def get_model_id_gdrive(model_type):
         embeddings_id = "1DBaVpJsitQ1qxtUvV1Kz7ThDc3az16kZ"
         word_index_id = "1rB4ksHyHZ9skes-fJHMa2Z8J1Qa7awQ9"
     elif model_type == "100d":
-        word_index_id = "1-oWV0LqG3fmrozRZ7WB1jzeTJHRUI3mq"
-        embeddings_id = "1SRHfX130_6Znz7zbdfqboKosz-PfNvNp"
-        
+        embeddings_id = "1-oWV0LqG3fmrozRZ7WB1jzeTJHRUI3mq"
+        word_index_id = "1SRHfX130_6Znz7zbdfqboKosz-PfNvNp"
+
     return word_index_id, embeddings_id
 
 
@@ -123,7 +123,7 @@ def get_openai_embeddings(sentence, model_name="text-embedding-3-small"):
             return np.zeros(1536)
         else:  # text-embedding-3-large
             return np.zeros(3072)
-    
+
     try:
         response = client.embeddings.create(
             input=sentence,
@@ -174,17 +174,18 @@ def get_category_embeddings(embeddings_metadata):
     """
     model_name = embeddings_metadata["model_name"]
     embedding_model = embeddings_metadata["embedding_model"]
-    
+
     cache_key = "cat_embed_" + embedding_model + "_" + model_name
     st.session_state[cache_key] = {}
-    
+
     for category in st.session_state.categories.split(" "):
         if embedding_model == "openai":
             if category not in st.session_state[cache_key]:
                 st.session_state[cache_key][category] = get_openai_embeddings(category, model_name=model_name)
         elif model_name:
             if category not in st.session_state[cache_key]:
-                st.session_state[cache_key][category] = get_sentence_transformer_embeddings(category, model_name=model_name)
+                st.session_state[cache_key][category] = get_sentence_transformer_embeddings(category,
+                                                                                            model_name=model_name)
         else:
             if category not in st.session_state[cache_key]:
                 st.session_state[cache_key][category] = get_sentence_transformer_embeddings(category)
@@ -197,15 +198,13 @@ def update_category_embeddings(embeddings_metadata):
     get_category_embeddings(embeddings_metadata)
 
 
-
-
 ### Plotting utility functions
-    
+
 def plot_piechart(sorted_cosine_scores_items):
     sorted_cosine_scores = np.array([
-            sorted_cosine_scores_items[index][1]
-            for index in range(len(sorted_cosine_scores_items))
-        ]
+        sorted_cosine_scores_items[index][1]
+        for index in range(len(sorted_cosine_scores_items))
+    ]
     )
     categories = st.session_state.categories.split(" ")
     categories_sorted = [
@@ -303,12 +302,13 @@ def cosine_similarity(x, y):
     ##################################
     ### TODO: Add code here (10 pts) ###
     ##################################
- 
-    
-    pass  
-    
 
-    
+    x_T = x.T  ## transpose x
+    cos_sim = np.dot(x_T, y) / (la.norm(x) * la.norm(y))
+    exp_cos_sim = math.exp(cos_sim)  ## Exponentiate cosine similarity
+    return exp_cos_sim
+
+
 # Task II: Average Glove Embedding Calculation
 def averaged_glove_embeddings_gdrive(sentence, word_index_dict, embeddings, model_type="50d"):
     """
@@ -322,12 +322,23 @@ def averaged_glove_embeddings_gdrive(sentence, word_index_dict, embeddings, mode
     """
     embedding_dim = int(model_type.split("d")[0])
     embedding = np.zeros(embedding_dim)
-    
+
     ##################################
     ##### TODO: Add code here (20 pts) #####
     ##################################
 
-    pass  
+    words = sentence.split(" ")  ## Split sentence into words by space
+    word_count = 0
+    for word in words:
+        ## Get embedding for each word
+        word_embedding = get_glove_embeddings(word, word_index_dict, embeddings, model_type)
+        ## Add embeddings and count when word is in word_index_dict
+        if word.lower() in word_index_dict:
+            embedding += word_embedding
+            word_count += 1
+    if word_count > 0:
+        embedding /= word_count  ## average the embeddings
+    return embedding
 
 
 # Task III: Sort the cosine similarity
@@ -373,7 +384,9 @@ def get_sorted_cosine_similarity(embeddings_metadata):
     """
     categories = st.session_state.categories.split(" ")
     cosine_sim = {}
-    
+    ## Get input sentence
+    sentence = st.session_state.text_search
+
     if embeddings_metadata["embedding_model"] == "glove":
         # Extract GloVe-specific parameters
         word_index_dict = embeddings_metadata["word_index_dict"]
@@ -383,41 +396,73 @@ def get_sorted_cosine_similarity(embeddings_metadata):
         ##########################################
         ## TODO: Implement GloVe similarity calculation (15 pts)
         ##########################################
-        
-        
-        pass  # Replace with your code
-        
+
+        # Get input sentence embedding
+        input_embedding = averaged_glove_embeddings_gdrive(
+            sentence, word_index_dict, embeddings, model_type
+        )
+        cache_key = "cat_embed_glove_"
+        get_category_embeddings_and_handle_cosine_sim(cache_key, categories, cosine_sim, embeddings_metadata,
+                                                      input_embedding)
+
 
     elif embeddings_metadata["embedding_model"] == "openai":
         # Extract OpenAI-specific parameters
         model_name = embeddings_metadata["model_name"]
         cache_key = "cat_embed_openai_" + model_name
-        
+
         ##########################################
         ## TODO: Implement OpenAI similarity calculation (15 pts)
         ##########################################
-               
-        pass  # Replace with your code
-        
+
+        # Get input sentence embedding
+        input_embedding = get_openai_embeddings(sentence, model_name=model_name)
+        get_category_embeddings_and_handle_cosine_sim(cache_key, categories, cosine_sim, embeddings_metadata,
+                                                      input_embedding)
+
+
 
     else:  # Sentence transformers
         # Extract Sentence Transformer-specific parameters
         model_name = embeddings_metadata["model_name"]
         cache_key = "cat_embed_transformers_" + (model_name if model_name else "default")
-        
+
         ##########################################
         ## TODO: Implement Sentence Transformer similarity calculation (15 pts)
         ##########################################
-        pass
-        
+        # Get input sentence embedding
+        input_embedding = get_sentence_transformer_embeddings(sentence, model_name=model_name)
+        get_category_embeddings_and_handle_cosine_sim(cache_key, categories, cosine_sim, embeddings_metadata,
+                                                      input_embedding)
 
     ##########################################
     ## TODO: Sort and return results (5 pts)
     ##########################################
 
-    
-    pass  
+    # Sort cosine similarity in descending order
+    sorted_cosine_sim = sorted(cosine_sim.items(), key=lambda item: item[1], reverse=True)
+    return sorted_cosine_sim
 
+
+def get_category_embeddings_and_handle_cosine_sim(cache_key, categories, cosine_sim, embeddings_metadata,
+                                                  input_embedding):
+    """
+        1. Get category embeddings from cache, if not found, update category embeddings
+        2. Compute cosine similarity and update cosine_sim dictionary
+        Args:
+            cache_key: cache key for session state
+            categories: list of categories
+            cosine_sim: dictionary to store cosine similarity
+            embeddings_metadata: embeddings metadata
+            input_embedding: input sentence embedding
+        Returns:
+            None
+    """
+    for idx, category in enumerate(categories):
+        category_embedding = st.session_state[cache_key][category]
+        if category_embedding is None:
+            update_category_embeddings(embeddings_metadata)
+        cosine_sim[idx] = cosine_similarity(input_embedding, category_embedding)
 
 
 ### Below is the main function, creating the app demo for text search engine using the text embeddings.
@@ -442,7 +487,6 @@ if __name__ == "__main__":
     )
 
     model_type = st.sidebar.selectbox("Choose the model", ("25d", "50d", "100d"), index=1)
-
 
     st.title("Search Based Retrieval Demo")
     st.subheader(
@@ -480,15 +524,13 @@ if __name__ == "__main__":
         with st.spinner("Downloading glove embeddings..."):
             download_glove_embeddings_gdrive(model_type)
 
-
     # Load glove embeddings
     word_index_dict, embeddings = load_glove_embeddings_gdrive(model_type)
-
 
     # Find closest word to an input word
     if st.session_state.text_search:
         results_dict = {}
-        
+
         # Glove embeddings
         print("Glove Embedding")
         embeddings_metadata = {
@@ -504,7 +546,7 @@ if __name__ == "__main__":
         # Sentence transformer embeddings
         print("Sentence Transformer Embedding")
         embeddings_metadata = {
-            "embedding_model": "transformers", 
+            "embedding_model": "transformers",
             "model_name": "all-MiniLM-L6-v2"
         }
         with st.spinner("Obtaining Cosine similarity for 384d sentence transformer..."):
@@ -514,7 +556,7 @@ if __name__ == "__main__":
         # OpenAI Small embeddings
         print("OpenAI Small Embedding")
         embeddings_metadata = {
-            "embedding_model": "openai", 
+            "embedding_model": "openai",
             "model_name": "text-embedding-3-small"
         }
         with st.spinner("Obtaining Cosine similarity for OpenAI Small (1536d)..."):
@@ -524,7 +566,7 @@ if __name__ == "__main__":
         # OpenAI Large embeddings
         print("OpenAI Large Embedding")
         embeddings_metadata = {
-            "embedding_model": "openai", 
+            "embedding_model": "openai",
             "model_name": "text-embedding-3-large"
         }
         with st.spinner("Obtaining Cosine similarity for OpenAI Large (3072d)..."):
@@ -541,14 +583,14 @@ if __name__ == "__main__":
 
         # Display results in tabs
         plot_alatirchart(results_dict)
-        
+
         # Add comparison table
         st.markdown("---")
         st.subheader("Detailed Comparison")
-        
+
         categories = st.session_state.categories.split(" ")
         comparison_data = []
-        
+
         for model_name, scores in results_dict.items():
             top_category_idx = scores[0][0]
             top_category = categories[top_category_idx]
@@ -558,15 +600,13 @@ if __name__ == "__main__":
                 "Top Category": top_category,
                 "Confidence Score": f"{top_score:.4f}"
             })
-        
+
         import pandas as pd
+
         df = pd.DataFrame(comparison_data)
         st.table(df)
 
         st.write("")
         st.write(
-            "Demo developed by [Your Name](https://www.linkedin.com/in/your_id/ - Optional)"
+            "Demo developed by Xindi Xu(https://www.linkedin.com/in/xindixu1220/)"
         )
-        
-
-        
