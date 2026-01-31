@@ -178,7 +178,8 @@ def get_category_embeddings(embeddings_metadata):
     embeddings = embeddings_metadata.get("embeddings")
     model_type = embeddings_metadata.get("model_type")
 
-    cache_key = "cat_embed_" + embedding_model + "_" + model_name
+    model_key = model_name if model_name else model_type
+    cache_key = "cat_embed_" + embedding_model + "_" + model_key
     st.session_state[cache_key] = {}
 
     for category in st.session_state.categories.split(" "):
@@ -411,7 +412,7 @@ def get_sorted_cosine_similarity(embeddings_metadata):
         input_embedding = averaged_glove_embeddings_gdrive(
             sentence, word_index_dict, embeddings, model_type
         )
-        cache_key = "cat_embed_glove_"
+        cache_key = "cat_embed_glove_" + model_type
         get_category_embeddings_and_handle_cosine_sim(cache_key, categories, cosine_sim, embeddings_metadata,
                                                       input_embedding)
 
@@ -471,9 +472,10 @@ def get_category_embeddings_and_handle_cosine_sim(cache_key, categories, cosine_
     for idx, category in enumerate(categories):
         if cache_key not in st.session_state:
             get_category_embeddings(embeddings_metadata)
-        category_embedding = st.session_state[cache_key][category]
+        category_embedding = st.session_state[cache_key].get(category)
         if category_embedding is None:
             update_category_embeddings(embeddings_metadata)
+            category_embedding = st.session_state[cache_key].get(category)
         cosine_sim[idx] = cosine_similarity(input_embedding, category_embedding)
 
 
