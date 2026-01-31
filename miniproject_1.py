@@ -172,8 +172,11 @@ def get_category_embeddings(embeddings_metadata):
     1. Split categories into words
     2. Get embeddings for each word
     """
-    model_name = embeddings_metadata["model_name"]
-    embedding_model = embeddings_metadata["embedding_model"]
+    model_name = embeddings_metadata.get("model_name") or ""
+    embedding_model = embeddings_metadata.get("embedding_model")
+    word_index_dict = embeddings_metadata.get("word_index_dict")
+    embeddings = embeddings_metadata.get("embeddings")
+    model_type = embeddings_metadata.get("model_type")
 
     cache_key = "cat_embed_" + embedding_model + "_" + model_name
     st.session_state[cache_key] = {}
@@ -182,13 +185,15 @@ def get_category_embeddings(embeddings_metadata):
         if embedding_model == "openai":
             if category not in st.session_state[cache_key]:
                 st.session_state[cache_key][category] = get_openai_embeddings(category, model_name=model_name)
-        elif model_name:
+        elif embedding_model == "transformers":
             if category not in st.session_state[cache_key]:
                 st.session_state[cache_key][category] = get_sentence_transformer_embeddings(category,
                                                                                             model_name=model_name)
         else:
             if category not in st.session_state[cache_key]:
-                st.session_state[cache_key][category] = get_sentence_transformer_embeddings(category)
+                st.session_state[cache_key][category] = averaged_glove_embeddings_gdrive(
+            category, word_index_dict, embeddings, model_type
+        )
 
 
 def update_category_embeddings(embeddings_metadata):
@@ -304,7 +309,12 @@ def cosine_similarity(x, y):
     ##################################
 
     x_T = x.T  ## transpose x
-    cos_sim = np.dot(x_T, y) / (la.norm(x) * la.norm(y))
+    norm_x = la.norm(x)
+    norm_y = la.norm(y)
+    if norm_x == 0 or norm_y == 0: ## handle zero vector to avoid NaN
+        cos_sim = 0.0
+    else:
+        cos_sim = np.dot(x_T, y) / (norm_x * norm_y)
     exp_cos_sim = math.exp(cos_sim)  ## Exponentiate cosine similarity
     return exp_cos_sim
 
@@ -459,6 +469,8 @@ def get_category_embeddings_and_handle_cosine_sim(cache_key, categories, cosine_
             None
     """
     for idx, category in enumerate(categories):
+        if cache_key not in st.session_state:
+            get_category_embeddings(embeddings_metadata)
         category_embedding = st.session_state[cache_key][category]
         if category_embedding is None:
             update_category_embeddings(embeddings_metadata)
