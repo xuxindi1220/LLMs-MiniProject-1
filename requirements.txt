@@ -1,8 +1,8 @@
 streamlit==1.53.1
 numpy==1.26.4
 scipy==1.17.0
-torch==2.2.2
-torchaudio==2.2.2
+torch
+torchaudio
 torchvision==0.17.2
 sentence-transformers==5.2.2
 gdown==5.2.1
