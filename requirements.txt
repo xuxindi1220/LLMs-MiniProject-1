@@ -3,7 +3,7 @@ numpy==1.26.4
 scipy==1.17.0
 torch
 torchaudio
-torchvision==0.17.2
+torchvision
 sentence-transformers==5.2.2
 gdown==5.2.1
 openai==2.16.0
