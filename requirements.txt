@@ -1,11 +1,12 @@
-streamlit==1.29.0
+streamlit==1.53.1
 numpy==1.25.0
-scipy==1.11.1
-torch==2.1.0
-sentence-transformers==2.2.2
-gdown==4.7.1
-openai==1.30.0
-rich>=10.14.0,<14
+scipy==1.17.0
+torch==2.2.2
+torchaudio==2.2.2
+torchvision==0.17.2
+sentence-transformers==5.2.2
+gdown==5.2.1
+openai==2.16.0
 matplotlib
 pandas
 
